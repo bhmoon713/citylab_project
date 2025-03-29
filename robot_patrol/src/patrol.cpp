@@ -45,9 +45,9 @@ private:
     if (min_value < 0.15) {
         cmd.linear.x = 0.0;
         if (min_direction_ < 0) {
-            cmd.angular.z = 1.0;
+            cmd.angular.z = 0.5;
         } else {
-            cmd.angular.z = -1.0;
+            cmd.angular.z = -0.5;
         }
     } else {
         cmd.linear.x = 0.1;
