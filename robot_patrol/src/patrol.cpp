@@ -38,7 +38,7 @@ private:
     direction_ = (max_index - 329) * 6.28 / 660;
 
     // ✅ Optional: Print for debug
-    RCLCPP_INFO(this->get_logger(), "Laser Size: %ld", msg->ranges.size());
+    //RCLCPP_INFO(this->get_logger(), "Laser Size: %ld", msg->ranges.size());
     RCLCPP_INFO(this->get_logger(), "Max Value: %.2f at index %d", max_value, max_index);
     RCLCPP_INFO(this->get_logger(), "Min Value: %.2f at index %d", min_value_, min_index);
   }
