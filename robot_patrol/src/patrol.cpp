@@ -54,7 +54,7 @@ private:
     auto cmd = geometry_msgs::msg::Twist();
 
     // === Obstacle Avoidance Logic ===
-    if (min_value_ < 0.2) {
+    if (min_value_ < 0.15) {
       cmd.linear.x = 0.0;
       if (min_direction_ < 0) {
         cmd.angular.z = 0.5;
