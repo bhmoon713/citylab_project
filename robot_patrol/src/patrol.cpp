@@ -25,8 +25,14 @@ private:
     float max_value = *max_it;
     int max_index = std::distance(msg->ranges.begin(), max_it);
 
-    RCLCPP_INFO(this->get_logger(), "Max value between 164~494: %.2f at index %d", max_value, max_index);
-    RCLCPP_INFO(this->get_logger(), "Angle to max distance: %.2f at index %d", (max_index-329)*6.28/660, max_index);
+    auto min_it = std::min_element(msg->ranges.begin() + 164, msg->ranges.begin() + 494);
+    float min_value = *min_it;
+    int min_index = std::distance(msg->ranges.begin(), min_it);
+
+
+
+    RCLCPP_INFO(this->get_logger(), "Max value: %.2f at index %d Min value: %.2f at index %d", max_value, max_index, min_value, min_index);
+    RCLCPP_INFO(this->get_logger(), "Angle to max : %.2f Angle to min : %.2f", (max_index-329)*6.28/660,(min_index-329)*6.28/660);
 
 
     //RCLCPP_INFO(this->get_logger(), "Laser Size: %ld", msg->ranges.size());
@@ -34,9 +40,20 @@ private:
     auto cmd = geometry_msgs::msg::Twist();
 
     float direction_=(max_index-329)*6.28/660;
-    cmd.linear.x = 0.1;
-    cmd.angular.z = direction_/2;
-  
+    float min_direction_=(min_index-329)*6.28/660;
+    
+    if (min_value < 0.15) {
+        cmd.linear.x = 0.0;
+        if (min_direction_ < 0) {
+            cmd.angular.z = 1.0;
+        } else {
+            cmd.angular.z = -1.0;
+        }
+    } else {
+        cmd.linear.x = 0.1;
+        cmd.angular.z = direction_ / 2;
+    }
+
     cmd_pub_->publish(cmd);
   }
 
@@ -48,7 +65,8 @@ private:
 int main(int argc, char **argv)
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<RobotPatrol>());
+  auto node = std::make_shared<RobotPatrol>();
+  //rclcpp::spin(std::make_shared<RobotPatrol>());
   rclcpp::Rate rate(10); // 10 Hz
   while (rclcpp::ok()) {
     rclcpp::spin_some(node);
