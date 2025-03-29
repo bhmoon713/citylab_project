@@ -1,13 +1,12 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import IncludeLaunchDescription
-from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.actions import ExecuteProcess
+
 from ament_index_python.packages import get_package_share_directory
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 import os
 
 def generate_launch_description():
-    # Path to your RViz config file
     rviz_config_path = os.path.join(
         get_package_share_directory('robot_patrol'),
         'rviz',
@@ -25,7 +24,7 @@ def generate_launch_description():
             package='rviz2',
             executable='rviz2',
             name='rviz2',
-            output='screen',
-            arguments=['-d', rviz_config_path]
+            arguments=['-d', rviz_config_path],
+            output='screen'
         )
     ])

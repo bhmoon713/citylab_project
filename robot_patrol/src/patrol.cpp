@@ -1,6 +1,8 @@
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "geometry_msgs/msg/twist.hpp"
+#include <algorithm>  // for std::min_element
+#include <tuple>      // for std::tuple
 
 class RobotPatrol : public rclcpp::Node
 {
@@ -22,38 +24,34 @@ private:
     // float front_left = msg->ranges[msg->ranges.size() * 2.5 / 4];
     // float left = msg->ranges[msg->ranges.size() * 3 / 4]; 
     
-    float right = msg->ranges[164];
-    float front_right = msg->ranges[247];
-    float front = msg->ranges[329];
-    float front_left = msg->ranges[412];
-    float left = msg->ranges[494];
+    // float right = msg->ranges[164];
+    // float front = msg->ranges[329];
+    // float left = msg->ranges[494];
 
-    RCLCPP_INFO(this->get_logger(), "Laser Size: %ld", msg->ranges.size());
-    RCLCPP_INFO(this->get_logger(), "Laser Readings → Front: %.2f m | Left: %.2f m | Right: %.2f m", front, left, right);
+//to get max value
+    auto max_it = std::max_element(msg->ranges.begin() + 164, msg->ranges.begin() + 494);
+    float max_value = *max_it;
+    int max_index = std::distance(msg->ranges.begin(), max_it);
+
+    RCLCPP_INFO(this->get_logger(), "Max value between 164~494: %.2f at index %d", max_value, max_index);
+    RCLCPP_INFO(this->get_logger(), "Angle to max distance: %.2f at index %d", (max_index-329)*6.28/660, max_index);
+
+
+    //RCLCPP_INFO(this->get_logger(), "Laser Size: %ld", msg->ranges.size());
+    //RCLCPP_INFO(this->get_logger(), "Laser Readings → Front: %.2f m | Left: %.2f m | Right: %.2f m", front, left, right);
     auto cmd = geometry_msgs::msg::Twist();
 
-  if (front > 0.3 && front_left > 0.3 && front_right > 0.3) {
-    // ✅ No obstacle: Move forward
-    cmd.linear.x = 0.1;
-    cmd.angular.z = 0.0;
-  } 
-  else if (front < 0.3 || right < 0.3 || front_right < 0.3 ) {
-    // ✅ Obstacle in front OR right: Turn left
-    cmd.linear.x = 0.0;
-    cmd.angular.z = 0.5;
-  }
-  else if (left < 0.3 ) {
-    // ✅ Obstacle in left: Turn right
-    cmd.linear.x = 0.0;
-    cmd.angular.z = -0.5;
-  }
 
-    cmd_pub_->publish(cmd);
+    cmd.linear.x = 0.1;
+    cmd.angular.z = (max_index-329)*6.28/660;
+  
+    //cmd_pub_->publish(cmd);
   }
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
 };
+
 
 int main(int argc, char **argv)
 {
