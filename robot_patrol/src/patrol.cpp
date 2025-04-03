@@ -28,25 +28,46 @@ private:
   float min_direction_; // Angle to closest obstacle
   float max_value_;     // Max distance between 164~494
   float max_direction_; // Angle to max distance
+  float left_;     // for debug
+  float front_; // for debug
+  float right_;     // for debug
+
+  
 
   // === Callbacks ===
   void scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
   {
+    //Simulation total laser value 660
+    //Real robot total laser value 720
+    int scanN = 720;
     // --- Min value in full range ---
-    auto min_it = std::min_element(msg->ranges.begin() + 164, msg->ranges.begin() + 494);
+    // auto min_it = std::min_element(msg->ranges.begin() + 164, msg->ranges.begin() + 494);
+    // min_value_ = *min_it;
+    // int min_index = std::distance(msg->ranges.begin(), min_it);
+    // min_direction_ = (min_index - 329) * 6.28 / 660;
+
+    auto min_it = std::min_element(msg->ranges.begin() + scanN/4, msg->ranges.begin() + scanN *3/4);
     min_value_ = *min_it;
     int min_index = std::distance(msg->ranges.begin(), min_it);
-    min_direction_ = (min_index - 329) * 6.28 / 660;
+    min_direction_ = (min_index - scanN/2) * 6.28 / scanN;
+
 
     // --- Max value in specific range 164~494 ---
-    auto max_it = std::max_element(msg->ranges.begin() + 164, msg->ranges.begin() + 494);
+    // auto max_it = std::max_element(msg->ranges.begin() + 164, msg->ranges.begin() + 494);
+    // max_value_ = *max_it;
+    // int max_index = std::distance(msg->ranges.begin(), max_it);
+    // max_direction_ = (max_index - 329) * 6.28 / 660;
+
+    auto max_it = std::max_element(msg->ranges.begin() + scanN/4, msg->ranges.begin() + scanN *3/4);
     max_value_ = *max_it;
     int max_index = std::distance(msg->ranges.begin(), max_it);
-    max_direction_ = (max_index - 329) * 6.28 / 660;
+    max_direction_ = (max_index - scanN/2) * 6.28 / scanN;
 
     // --- Print for debug ---
-    RCLCPP_INFO(this->get_logger(), "📡 Laser size: %ld | Min: %.2f at %.2f rad | Max: %.2f at %.2f rad",
-                msg->ranges.size(), min_value_, min_direction_, max_value_, max_direction_);
+    // RCLCPP_INFO(this->get_logger(), "📡 Laser size: %ld | Min: %.2f at %.2f rad | Max: %.2f at %.2f rad",
+    //             msg->ranges.size(), min_value_, min_direction_, max_value_, max_direction_);
+
+    RCLCPP_INFO(this->get_logger(), "📡 Laser size: %ld | Left %.2f Front %.2f Right: %.2f ", msg->ranges.size(), left_, front_, right);
   }
 
   void timerCallback()
