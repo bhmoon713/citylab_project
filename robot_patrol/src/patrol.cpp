@@ -51,8 +51,8 @@ private:
     // std::distance(msg->ranges.begin(), min_it); min_direction_ = (min_index -
     // 329) * 6.28 / 660;
 
-    auto min_it = std::min_element(msg->ranges.begin() + scanN / 4,
-                                   msg->ranges.begin() + scanN * 3 / 4);
+    auto min_it = std::min_element(msg->ranges.begin() + scanN * 1.5 / 4,
+                                   msg->ranges.begin() + scanN * 2.5 / 4);
     min_value_ = *min_it;
     int min_index = std::distance(msg->ranges.begin(), min_it);
     min_direction_ = (min_index - scanN / 2) * 6.28 / scanN;
@@ -77,13 +77,13 @@ private:
   }
 
     void checkvicinity(geometry_msgs::msg::Twist &cmd) {
-        if (min_value_ < 0.25 && min_direction_ < 0) {
+        if (min_value_ < 0.30 && min_direction_ < 0) {
             cmd.linear.x = 0.05;
-            cmd.angular.z = 0.5;
+            cmd.angular.z = 0.75;
             RCLCPP_INFO(this->get_logger(), "There is something on right");
         } else if (min_value_ < 0.25 && min_direction_ > 0) {
             cmd.linear.x = 0.05;
-            cmd.angular.z = -0.5;
+            cmd.angular.z = -0.75;
             RCLCPP_INFO(this->get_logger(), "There is something on left");
         }
 
