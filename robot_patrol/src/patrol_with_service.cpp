@@ -18,7 +18,7 @@ public:
         std::chrono::milliseconds(100),
         std::bind(&RobotPatrolWithService::timerCallback, this));
 
-    RCLCPP_INFO(this->get_logger(), "🚗 Robot Patrol with Service Node Started");
+    RCLCPP_INFO(this->get_logger(), " Robot Patrol with Service Node Started");
   }
 
 private:
@@ -44,7 +44,7 @@ private:
                 msg->ranges.size(), left, front, right);
   }
 
-  void timerCallback() {
+    void timerCallback() {
     if (!scan_received_) return;
 
     auto cmd = geometry_msgs::msg::Twist();
@@ -54,43 +54,48 @@ private:
     float front = latest_scan_.ranges[scanN * 2 / 4];
 
     if (front > 0.35) {
-      cmd.linear.x = 0.1;
-      cmd.angular.z = 0.0;
-      RCLCPP_INFO(this->get_logger(), "🟢 Path is clear — Going forward");
-    } else {
-      // Call direction_service
-      if (!client_->wait_for_service(std::chrono::milliseconds(500))) {
-        RCLCPP_WARN(this->get_logger(), "❗ Waiting for /direction_service...");
+        cmd.linear.x = 0.1;
+        cmd.angular.z = 0.0;
+        RCLCPP_INFO(this->get_logger(), " Path is clear — Going forward");
+        cmd_pub_->publish(cmd);
         return;
-      }
-
-      auto request = std::make_shared<robot_patrol::srv::GetDirection::Request>();
-      request->laser_data = latest_scan_;
-
-      auto future = client_->async_send_request(request);
-      if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), future) ==
-          rclcpp::FutureReturnCode::SUCCESS)
-      {
-        std::string direction = future.get()->direction;
-        RCLCPP_INFO(this->get_logger(), "➡️ Direction from service: %s", direction.c_str());
-
-        if (direction == "forward") {
-          cmd.linear.x = 0.1;
-          cmd.angular.z = 0.0;
-        } else if (direction == "left") {
-          cmd.linear.x = 0.1;
-          cmd.angular.z = 0.5;
-        } else if (direction == "right") {
-          cmd.linear.x = 0.1;
-          cmd.angular.z = -0.5;
-        }
-      } else {
-        RCLCPP_ERROR(this->get_logger(), "⚠️ Failed to call direction service");
-      }
     }
 
-    cmd_pub_->publish(cmd);
-  }
+    // Obstacle detected → call service
+    if (!client_->wait_for_service(std::chrono::milliseconds(500))) {
+        RCLCPP_WARN(this->get_logger(), " Waiting for /direction_service...");
+        return;
+    }
+
+    auto request = std::make_shared<robot_patrol::srv::GetDirection::Request>();
+    request->laser_data = latest_scan_;
+
+    RCLCPP_INFO(this->get_logger(), "Sending request to /direction_service");
+
+    // Async request with callback
+    client_->async_send_request(request,
+        [this](rclcpp::Client<robot_patrol::srv::GetDirection>::SharedFuture future_response) {
+        auto response = future_response.get();
+        auto cmd = geometry_msgs::msg::Twist();
+
+        RCLCPP_INFO(this->get_logger(), " Direction from service: %s", response->direction.c_str());
+
+        if (response->direction == "forward") {
+            cmd.linear.x = 0.1;
+            cmd.angular.z = 0.0;
+        } else if (response->direction == "left") {
+            cmd.linear.x = 0.05;
+            cmd.angular.z = 0.5;
+        } else if (response->direction == "right") {
+            cmd.linear.x = 0.05;
+            cmd.angular.z = -0.5;
+        }
+
+        cmd_pub_->publish(cmd);
+        }
+    );
+    }
+
 };
 
 int main(int argc, char **argv) {
