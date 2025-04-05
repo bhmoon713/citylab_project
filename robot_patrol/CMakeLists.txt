@@ -13,6 +13,19 @@ find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(robot_patrol REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(rclcpp_action REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+
+
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "srv/GetDirection.srv"
+  "action/GoToPose.action"
+  DEPENDENCIES sensor_msgs geometry_msgs
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -38,6 +51,17 @@ ament_target_dependencies(direction_service rclcpp sensor_msgs robot_patrol)
 add_executable(test_service src/test_service.cpp)
 ament_target_dependencies(test_service rclcpp sensor_msgs robot_patrol)
 
+add_executable(go_to_pose_action src/go_to_pose_action.cpp)
+ament_target_dependencies(go_to_pose_action
+  rclcpp
+  rclcpp_action
+  geometry_msgs
+  nav_msgs
+  tf2
+  tf2_ros
+  tf2_geometry_msgs
+  robot_patrol
+)
 # 
 
 install(TARGETS
@@ -45,6 +69,7 @@ install(TARGETS
   patrol_with_service
   test_service
   direction_service
+  go_to_pose_action
   DESTINATION lib/${PROJECT_NAME})
 
 # Install launch files.
@@ -52,12 +77,6 @@ install(DIRECTORY
   launch
   rviz
   DESTINATION share/${PROJECT_NAME}/
-)
-
-rosidl_generate_interfaces(${PROJECT_NAME}
-  "srv/GetDirection.srv"
-  "action/GoToPose.action"
-  DEPENDENCIES sensor_msgs geometry_msgs
 )
 
 ament_package()
