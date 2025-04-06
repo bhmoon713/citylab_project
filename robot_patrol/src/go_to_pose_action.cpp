@@ -29,7 +29,7 @@ public:
       std::bind(&GoToPoseActionServer::handle_cancel, this, _1),
       std::bind(&GoToPoseActionServer::handle_accepted, this, _1));
 
-    RCLCPP_INFO(this->get_logger(), "✅ Action Server Ready");
+    RCLCPP_INFO(this->get_logger(), "Action Server Ready");
   }
 
 private:
@@ -59,7 +59,7 @@ private:
   rclcpp_action::GoalResponse handle_goal(
     const rclcpp_action::GoalUUID &, std::shared_ptr<const GoToPose::Goal> goal)
   {
-    RCLCPP_INFO(this->get_logger(), "🎯 Goal received: x=%.2f y=%.2f θ=%.2f",
+    RCLCPP_INFO(this->get_logger(), "Action Called: x=%.2f y=%.2f θ=%.2f",
                 goal->goal_pos.x, goal->goal_pos.y, goal->goal_pos.theta);
     return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
   }
@@ -130,7 +130,7 @@ private:
     // Final result
     result->status = true;
     goal_handle->succeed(result);
-    RCLCPP_INFO(this->get_logger(), "✅ Reached goal!");
+    RCLCPP_INFO(this->get_logger(), "Action Completed");
   }
 };
 
