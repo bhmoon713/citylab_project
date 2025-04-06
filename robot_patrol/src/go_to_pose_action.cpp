@@ -1,0 +1,143 @@
+#include "rclcpp/rclcpp.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
+#include "geometry_msgs/msg/twist.hpp"
+#include "geometry_msgs/msg/pose2_d.hpp"
+#include "nav_msgs/msg/odometry.hpp"
+#include "tf2/LinearMath/Quaternion.h"
+#include "tf2/LinearMath/Matrix3x3.h"
+#include "robot_patrol/action/go_to_pose.hpp"
+
+using GoToPose = robot_patrol::action::GoToPose;
+using GoalHandleGoToPose = rclcpp_action::ServerGoalHandle<GoToPose>;
+
+class GoToPoseActionServer : public rclcpp::Node
+{
+public:
+  GoToPoseActionServer() : Node("go_to_pose_action_server")
+  {
+    using namespace std::placeholders;
+
+    goal_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+      "/odom", 10, std::bind(&GoToPoseActionServer::odom_callback, this, _1));
+
+    cmd_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 10);
+
+    action_server_ = rclcpp_action::create_server<GoToPose>(
+      this,
+      "/go_to_pose",
+      std::bind(&GoToPoseActionServer::handle_goal, this, _1, _2),
+      std::bind(&GoToPoseActionServer::handle_cancel, this, _1),
+      std::bind(&GoToPoseActionServer::handle_accepted, this, _1));
+
+    RCLCPP_INFO(this->get_logger(), "✅ Action Server Ready");
+  }
+
+private:
+  rclcpp_action::Server<GoToPose>::SharedPtr action_server_;
+  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr goal_sub_;
+
+  geometry_msgs::msg::Pose2D current_pos_;
+  geometry_msgs::msg::Pose2D desired_pos_;
+
+  void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
+  {
+    current_pos_.x = msg->pose.pose.position.x;
+    current_pos_.y = msg->pose.pose.position.y;
+
+    tf2::Quaternion q(
+      msg->pose.pose.orientation.x,
+      msg->pose.pose.orientation.y,
+      msg->pose.pose.orientation.z,
+      msg->pose.pose.orientation.w);
+    
+    double roll, pitch, yaw;
+    tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);
+    current_pos_.theta = yaw;
+  }
+
+  rclcpp_action::GoalResponse handle_goal(
+    const rclcpp_action::GoalUUID &, std::shared_ptr<const GoToPose::Goal> goal)
+  {
+    RCLCPP_INFO(this->get_logger(), "🎯 Goal received: x=%.2f y=%.2f θ=%.2f",
+                goal->goal_pos.x, goal->goal_pos.y, goal->goal_pos.theta);
+    return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+  }
+
+  rclcpp_action::CancelResponse handle_cancel(
+    const std::shared_ptr<GoalHandleGoToPose>)
+  {
+    RCLCPP_WARN(this->get_logger(), "❌ Goal canceled");
+    return rclcpp_action::CancelResponse::ACCEPT;
+  }
+
+  void handle_accepted(const std::shared_ptr<GoalHandleGoToPose> goal_handle)
+  {
+    std::thread([this, goal_handle]() {
+      this->execute(goal_handle);
+    }).detach();
+  }
+
+  void execute(const std::shared_ptr<GoalHandleGoToPose> goal_handle)
+  {
+    const auto goal = goal_handle->get_goal();
+    desired_pos_ = goal->goal_pos;
+
+    auto feedback = std::make_shared<GoToPose::Feedback>();
+    auto result = std::make_shared<GoToPose::Result>();
+
+    rclcpp::Rate rate(10); // 10Hz
+
+    while (rclcpp::ok()) {
+      // Check if goal is canceled
+      if (goal_handle->is_canceling()) {
+        cmd_pub_->publish(geometry_msgs::msg::Twist()); // Stop robot
+        goal_handle->canceled(result);
+        RCLCPP_INFO(this->get_logger(), "❌ Goal canceled mid-execution");
+        return;
+      }
+
+      // Compute distance and angle to goal
+      double dx = desired_pos_.x - current_pos_.x;
+      double dy = desired_pos_.y - current_pos_.y;
+      double distance = std::sqrt(dx * dx + dy * dy);
+      double target_angle = std::atan2(dy, dx);
+      double angle_diff = target_angle - current_pos_.theta;
+
+      // Normalize angle [-π, π]
+      while (angle_diff > M_PI) angle_diff -= 2 * M_PI;
+      while (angle_diff < -M_PI) angle_diff += 2 * M_PI;
+
+      // Publish feedback
+      feedback->current_pos = current_pos_;
+      goal_handle->publish_feedback(feedback);
+
+      geometry_msgs::msg::Twist cmd;
+      if (distance > 0.05) {
+        cmd.linear.x = 0.2;
+        cmd.angular.z = angle_diff;
+      } else {
+        cmd.linear.x = 0.0;
+        cmd.angular.z = 0.0;
+        cmd_pub_->publish(cmd);
+        break;
+      }
+
+      cmd_pub_->publish(cmd);
+      rate.sleep();
+    }
+
+    // Final result
+    result->status = true;
+    goal_handle->succeed(result);
+    RCLCPP_INFO(this->get_logger(), "✅ Reached goal!");
+  }
+};
+
+int main(int argc, char **argv)
+{
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<GoToPoseActionServer>());
+  rclcpp::shutdown();
+  return 0;
+}
