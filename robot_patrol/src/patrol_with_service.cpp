@@ -39,9 +39,9 @@ private:
     float front = msg->ranges[scanN * 2 / 4];
     float right = msg->ranges[scanN * 1 / 4];
 
-    RCLCPP_INFO(this->get_logger(),
-                "📡 Laser size: %zu | Left %.2f Front %.2f Right: %.2f",
-                msg->ranges.size(), left, front, right);
+    // RCLCPP_INFO(this->get_logger(),
+    //             "📡 Laser size: %zu | Left %.2f Front %.2f Right: %.2f",
+    //             msg->ranges.size(), left, front, right);
   }
 
     void timerCallback() {
@@ -50,16 +50,16 @@ private:
     auto cmd = geometry_msgs::msg::Twist();
 
     // Check front distance
-    int scanN = latest_scan_.ranges.size();
-    float front = latest_scan_.ranges[scanN * 2 / 4];
+    // int scanN = latest_scan_.ranges.size();
+    // float front = latest_scan_.ranges[scanN * 2 / 4];
 
-    if (front > 0.35) {
-        cmd.linear.x = 0.1;
-        cmd.angular.z = 0.0;
-        RCLCPP_INFO(this->get_logger(), " Path is clear — Going forward");
-        cmd_pub_->publish(cmd);
-        return;
-    }
+    // if (front > 0.35) {
+    //     cmd.linear.x = 0.1;
+    //     cmd.angular.z = 0.0;
+    //     RCLCPP_INFO(this->get_logger(), " Path is clear — Going forward");
+    //     cmd_pub_->publish(cmd);
+    //     return;
+    // }
 
     // Obstacle detected → call service
     if (!client_->wait_for_service(std::chrono::milliseconds(500))) {
@@ -84,10 +84,10 @@ private:
             cmd.linear.x = 0.1;
             cmd.angular.z = 0.0;
         } else if (response->direction == "left") {
-            cmd.linear.x = 0.05;
+            cmd.linear.x = 0.1;
             cmd.angular.z = 0.5;
         } else if (response->direction == "right") {
-            cmd.linear.x = 0.05;
+            cmd.linear.x = 0.1;
             cmd.angular.z = -0.5;
         }
 
