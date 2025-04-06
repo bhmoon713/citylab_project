@@ -11,7 +11,7 @@ public:
       "/scan", 10,
       std::bind(&TestServiceClient::laser_callback, this, std::placeholders::_1));
 
-    RCLCPP_INFO(this->get_logger(), "✅ Service Client Ready");
+    RCLCPP_INFO(this->get_logger(), " Service Client Ready");
   }
 
 private:
