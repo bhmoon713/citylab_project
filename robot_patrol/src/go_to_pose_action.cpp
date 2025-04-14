@@ -77,61 +77,85 @@ private:
       this->execute(goal_handle);
     }).detach();
   }
+double normalize_angle(double angle)
+{
+    while (angle > M_PI) angle -= 2 * M_PI;
+    while (angle < -M_PI) angle += 2 * M_PI;
+    return angle;
+}
 
-  void execute(const std::shared_ptr<GoalHandleGoToPose> goal_handle)
-  {
+
+    void execute(const std::shared_ptr<GoalHandleGoToPose> goal_handle)
+    {
     const auto goal = goal_handle->get_goal();
     desired_pos_ = goal->goal_pos;
 
     auto feedback = std::make_shared<GoToPose::Feedback>();
     auto result = std::make_shared<GoToPose::Result>();
 
-    rclcpp::Rate rate(10); // 10Hz
+    rclcpp::Rate rate(10); // 10 Hz
+
+    const double distance_thresh = 0.03; // meters
+    const double angle_thresh = 0.03;   // radians (~3 degrees)
 
     while (rclcpp::ok()) {
-      // Check if goal is canceled
-      if (goal_handle->is_canceling()) {
-        cmd_pub_->publish(geometry_msgs::msg::Twist()); // Stop robot
+        if (goal_handle->is_canceling()) {
+        cmd_pub_->publish(geometry_msgs::msg::Twist());
         goal_handle->canceled(result);
         RCLCPP_INFO(this->get_logger(), "❌ Goal canceled mid-execution");
         return;
-      }
+        }
 
-      // Compute distance and angle to goal
-      double dx = desired_pos_.x - current_pos_.x;
-      double dy = desired_pos_.y - current_pos_.y;
-      double distance = std::sqrt(dx * dx + dy * dy);
-      double target_angle = std::atan2(dy, dx);
-      double angle_diff = target_angle - current_pos_.theta;
+        // Calculate pose deltas
+        double dx = desired_pos_.x - current_pos_.x;
+        double dy = desired_pos_.y - current_pos_.y;
+        double distance = std::sqrt(dx * dx + dy * dy);
+        double target_angle = std::atan2(dy, dx);
+        double angle_to_target = normalize_angle(target_angle - current_pos_.theta);
+        double final_angle_diff = normalize_angle(desired_pos_.theta - current_pos_.theta);
 
-      // Normalize angle [-π, π]
-      while (angle_diff > M_PI) angle_diff -= 2 * M_PI;
-      while (angle_diff < -M_PI) angle_diff += 2 * M_PI;
+        // Normalize angles to [-π, π]
+        while (angle_to_target > M_PI) angle_to_target -= 2 * M_PI;
+        while (angle_to_target < -M_PI) angle_to_target += 2 * M_PI;
+        while (final_angle_diff > M_PI) final_angle_diff -= 2 * M_PI;
+        while (final_angle_diff < -M_PI) final_angle_diff += 2 * M_PI;
 
-      // Publish feedback
-      feedback->current_pos = current_pos_;
-      goal_handle->publish_feedback(feedback);
+        // Feedback to client
+        feedback->current_pos = current_pos_;
+        goal_handle->publish_feedback(feedback);
 
-      geometry_msgs::msg::Twist cmd;
-      if (distance > 0.05) {
-        cmd.linear.x = 0.2;
-        cmd.angular.z = angle_diff;
-      } else {
-        cmd.linear.x = 0.0;
-        cmd.angular.z = 0.0;
+        geometry_msgs::msg::Twist cmd;
+
+        if (distance > distance_thresh) {
+        // Phase 1: turn to face the target first
+        if (std::abs(angle_to_target) > angle_thresh) {
+            cmd.angular.z = 0.5 * angle_to_target;
+            cmd.linear.x = 0.0; // rotate in place
+        } else {
+            // Phase 2: drive forward toward the target
+            cmd.linear.x = 0.2;
+            cmd.angular.z = 0.5 * angle_to_target;
+        }
+        } else {
+        // Final alignment at target position
+        if (std::abs(final_angle_diff) > angle_thresh) {
+            cmd.angular.z = 0.5 * final_angle_diff;
+            cmd.linear.x = 0.0;
+        } else {
+            // Goal complete
+            cmd_pub_->publish(geometry_msgs::msg::Twist()); // stop
+            break;
+        }
+        }
+
         cmd_pub_->publish(cmd);
-        break;
-      }
-
-      cmd_pub_->publish(cmd);
-      rate.sleep();
+        rate.sleep();
     }
 
-    // Final result
     result->status = true;
     goal_handle->succeed(result);
-    RCLCPP_INFO(this->get_logger(), "Action Completed");
-  }
+    RCLCPP_INFO(this->get_logger(), "✅ Goal reached and aligned.");
+    }
 };
 
 int main(int argc, char **argv)
