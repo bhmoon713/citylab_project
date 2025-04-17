@@ -1,6 +1,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "robot_patrol/srv/get_direction.hpp"
+#include <cmath>  // for std::isfinite
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -44,17 +45,39 @@ private:
     size_t left_end    = n * 3 / 4;
 
     // Accumulate distances..&& i < n
+    // double total_dist_sec_right = 0.0;
+    // for (size_t i = right_start; i < right_end ; ++i)
+    //   total_dist_sec_right += ranges[i];
+
     double total_dist_sec_right = 0.0;
-    for (size_t i = right_start; i < right_end ; ++i)
-      total_dist_sec_right += ranges[i];
+    for (size_t i = right_start; i < right_end; ++i) {
+    if (std::isfinite(ranges[i])) {  // excludes both inf and NaN
+        total_dist_sec_right += ranges[i];
+    }
+    }
+
+    // double total_dist_sec_front = 0.0;
+    // for (size_t i = front_start; i < front_end ; ++i)
+    //   total_dist_sec_front += ranges[i];
 
     double total_dist_sec_front = 0.0;
-    for (size_t i = front_start; i < front_end ; ++i)
-      total_dist_sec_front += ranges[i];
+    for (size_t i = front_start; i < front_end; ++i) {
+    if (std::isfinite(ranges[i])) {
+        total_dist_sec_front += ranges[i];
+    }
+    }
+
+    // double total_dist_sec_left = 0.0;
+    // for (size_t i = left_start; i < left_end ; ++i)
+    //   total_dist_sec_left += ranges[i];
+
 
     double total_dist_sec_left = 0.0;
-    for (size_t i = left_start; i < left_end ; ++i)
-      total_dist_sec_left += ranges[i];
+    for (size_t i = left_start; i < left_end; ++i) {
+    if (std::isfinite(ranges[i])) {
+        total_dist_sec_left += ranges[i];
+    }
+    }
 
     float front_distance = ranges[n / 2];  // Center ray for obstacle detection
 
