@@ -131,7 +131,7 @@ double normalize_angle(double angle)
         // Phase 1: turn to face the target first
         if (std::abs(angle_to_target) > angle_thresh) {
             cmd.angular.z = 0.5 * angle_to_target;
-            cmd.linear.x = 0.0; // rotate in place
+            cmd.linear.x = 0.0; // do not move just rotate
         } else {
             // Phase 2: drive forward toward the target
             cmd.linear.x = 0.2;
