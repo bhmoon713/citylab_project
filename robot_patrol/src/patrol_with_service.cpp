@@ -30,6 +30,9 @@ private:
   sensor_msgs::msg::LaserScan latest_scan_;
   bool scan_received_ = false;
 
+  float min_value_;     // Distance to closest obstacle
+  float min_direction_; // Angle to closest obstacle
+
   void scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr msg) {
     latest_scan_ = *msg;
     scan_received_ = true;
@@ -38,11 +41,30 @@ private:
     float left = msg->ranges[scanN * 3 / 4];
     float front = msg->ranges[scanN * 2 / 4];
     float right = msg->ranges[scanN * 1 / 4];
+    
+    auto min_it = std::min_element(msg->ranges.begin() + scanN * 1.5 / 4,
+                                   msg->ranges.begin() + scanN * 2.5 / 4);
+    min_value_ = *min_it;
+    int min_index = std::distance(msg->ranges.begin(), min_it);
+    min_direction_ = (min_index - scanN / 2) * 6.28 / scanN;
 
-    // RCLCPP_INFO(this->get_logger(),
-    //             "📡 Laser size: %zu | Left %.2f Front %.2f Right: %.2f",
-    //             msg->ranges.size(), left, front, right);
-  }
+    RCLCPP_INFO(this->get_logger(),
+                "📡 Laser size: %zu | Left %.2f Front %.2f Right: %.2f",
+                msg->ranges.size(), left, front, right);
+    }
+
+    void checkvicinity(geometry_msgs::msg::Twist &cmd) {
+        if (min_value_ < 0.30 && min_direction_ < 0) {
+            cmd.linear.x = 0.05;
+            cmd.angular.z = 0.75;
+            RCLCPP_INFO(this->get_logger(), "There is something on right");
+        } else if (min_value_ < 0.25 && min_direction_ > 0) {
+            cmd.linear.x = 0.05;
+            cmd.angular.z = -0.75;
+            RCLCPP_INFO(this->get_logger(), "There is something on left");
+        }
+
+    }
 
     void timerCallback() {
     if (!scan_received_) return;
@@ -82,7 +104,7 @@ private:
 
         if (response->direction == "forward") {
             cmd.linear.x = 0.1;
-            cmd.angular.z = 0.0;
+            cmd.angular.z = 0.0;            
         } else if (response->direction == "left") {
             cmd.linear.x = 0.1;
             cmd.angular.z = 0.5;
@@ -90,7 +112,7 @@ private:
             cmd.linear.x = 0.1;
             cmd.angular.z = -0.5;
         }
-
+        checkvicinity(cmd);
         cmd_pub_->publish(cmd);
         }
     );

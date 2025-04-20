@@ -112,7 +112,8 @@ double normalize_angle(double angle)
         double distance = std::sqrt(dx * dx + dy * dy);
         double target_angle = std::atan2(dy, dx);
         double angle_to_target = normalize_angle(target_angle - current_pos_.theta);
-        double final_angle_diff = normalize_angle(desired_pos_.theta - current_pos_.theta);
+        double desired_angle_rad = desired_pos_.theta *3.14/180; 
+        double final_angle_diff = normalize_angle(desired_angle_rad - current_pos_.theta);
 
         // Normalize angles to [-π, π]
         while (angle_to_target > M_PI) angle_to_target -= 2 * M_PI;
@@ -150,6 +151,8 @@ double normalize_angle(double angle)
 
         cmd_pub_->publish(cmd);
         rate.sleep();
+        RCLCPP_INFO(this->get_logger(), "Action Called: Desired=%.2f inRad=%.2f θ=%.2f",
+                desired_pos_.theta, desired_angle_rad, current_pos_.theta);
     }
 
     result->status = true;
