@@ -36,25 +36,48 @@ private:
 
 
     // Define sector boundaries
-    size_t right_start = n * 1 / 4;
+    size_t right_start = n * 0.8 / 4;
     size_t right_end   = n * 5 / 12;
     size_t front_start = n * 5 / 12;
     size_t front_end   = n * 7 / 12;
     size_t left_start  = n * 7 / 12;
-    size_t left_end    = n * 3 / 4;
+    size_t left_end    = n * 3.2 / 4;
 
     // Accumulate distances..&& i < n
+    // double total_dist_sec_right = 0.0;
+    // for (size_t i = right_start; i < right_end ; ++i)
+    //   total_dist_sec_right += ranges[i];
+    
     double total_dist_sec_right = 0.0;
-    for (size_t i = right_start; i < right_end ; ++i)
-      total_dist_sec_right += ranges[i];
+    for (size_t i = right_start; i < right_end; ++i) {
+        if (std::isfinite(ranges[i])) {
+            total_dist_sec_right += ranges[i];
+        }
+    }
+
+    // double total_dist_sec_front = 0.0;
+    // for (size_t i = front_start; i < front_end ; ++i)
+    //   total_dist_sec_front += ranges[i];
 
     double total_dist_sec_front = 0.0;
-    for (size_t i = front_start; i < front_end ; ++i)
-      total_dist_sec_front += ranges[i];
+    for (size_t i = front_start; i < front_end; ++i) {
+        if (std::isfinite(ranges[i])) {
+            total_dist_sec_front += ranges[i];
+        }
+    }
+
+
+    // double total_dist_sec_left = 0.0;
+    // for (size_t i = left_start; i < left_end ; ++i)
+    //   total_dist_sec_left += ranges[i];
+
 
     double total_dist_sec_left = 0.0;
-    for (size_t i = left_start; i < left_end ; ++i)
-      total_dist_sec_left += ranges[i];
+    for (size_t i = left_start; i < left_end; ++i) {
+        if (std::isfinite(ranges[i])) {
+            total_dist_sec_left += ranges[i];
+        }
+    }
 
     float front_distance = ranges[n / 2];  // Center ray for obstacle detection
 
@@ -67,7 +90,7 @@ private:
       front_distance, total_dist_sec_right, total_dist_sec_front, total_dist_sec_left);
 
     // Decision logic
-    if (front_distance < 0.35 || min_front < 0.3) {
+    if (front_distance < 0.4 || min_front < 0.3) {
     // if (total_dist_sec_front < 0.35 *110  || ranges[165] <0.3 || ranges[495] <0.3) {
     // Obstacle detected — evaluate sectors
     RCLCPP_INFO(this->get_logger(),

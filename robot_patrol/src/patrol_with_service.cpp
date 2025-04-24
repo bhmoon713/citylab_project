@@ -56,11 +56,11 @@ private:
     void checkvicinity(geometry_msgs::msg::Twist &cmd) {
         if (min_value_ < 0.30 && min_direction_ < 0) {
             cmd.linear.x = 0.05;
-            cmd.angular.z = 0.75;
+            cmd.angular.z = 0.5;
             RCLCPP_INFO(this->get_logger(), "There is something on right");
         } else if (min_value_ < 0.25 && min_direction_ > 0) {
             cmd.linear.x = 0.05;
-            cmd.angular.z = -0.75;
+            cmd.angular.z = -0.5;
             RCLCPP_INFO(this->get_logger(), "There is something on left");
         }
 
