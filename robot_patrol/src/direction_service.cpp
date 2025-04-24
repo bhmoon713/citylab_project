@@ -90,7 +90,8 @@ private:
       front_distance, total_dist_sec_right, total_dist_sec_front, total_dist_sec_left);
 
     // Decision logic
-    if (front_distance < 0.4 || min_front < 0.3) {
+    // if (front_distance < 0.4 || min_front < 0.3) {
+    if (front_distance < 0.4) {
     // if (total_dist_sec_front < 0.35 *110  || ranges[165] <0.3 || ranges[495] <0.3) {
     // Obstacle detected — evaluate sectors
     RCLCPP_INFO(this->get_logger(),
